@@ -261,8 +261,8 @@ private static void SeedLoans(AppDbContext context)
         new Loan
         {
             UserId = reader1, ExampleBookId = exampleBooks[6],
-            IssuedAt = Utc(2026, 1, 15), DueDate = Utc(2026, 2, 15),
-            ExtensionsCount = 2, ReturnedAt = null
+            IssuedAt = Utc(2026, 1, 15), DueDate = Utc(2026, 3, 15),
+            ExtensionsCount = 0, ReturnedAt = null
         },
         new Loan
         {

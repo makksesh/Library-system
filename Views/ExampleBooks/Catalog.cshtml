@@ -1,0 +1,130 @@
+@model IEnumerable<LibApp.Models.ViewModels.VersionCatalogItem>
+@{
+    ViewData["Title"] = "Каталог";
+    var categories = ViewBag.Categories as List<string> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold" style="color: var(--blue-dk);">📚 Каталог книг</h2>
+</div>
+
+@* Фильтры *@
+<form method="get" class="row g-2 mb-4 align-items-end">
+    <div class="col-md-6">
+        <label class="form-label small text-muted">Поиск по названию / автору</label>
+        <input type="text"
+               name="search"
+               value="@ViewBag.Search"
+               class="form-control form-control-sm"
+               placeholder="Например: Паттерны проектирования" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small text-muted">Жанр</label>
+        <select name="category" class="form-select form-select-sm">
+            <option value="">Все жанры</option>
+            @foreach (var cat in categories)
+            {
+                <option value="@cat" selected="@(ViewBag.SelectedCategory == cat ? "selected" : null)">
+                    @cat
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Найти</button>
+        <a asp-action="Catalog" class="btn btn-outline-secondary btn-sm">Сбросить</a>
+    </div>
+</form>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Книги не найдены. Попробуйте изменить фильтры.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle shadow-sm rounded overflow-hidden">
+            <thead style="background: var(--blue-dk); color:#fff;">
+                <tr>
+                    <th>#</th>
+                    <th>Название</th>
+                    <th>Автор</th>
+                    <th>Жанр</th>
+                    <th>Год</th>
+                    <th>Экземпляров</th>
+                    <th>Свободно</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int i = 1;
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-muted">@i++</td>
+                        <td class="fw-semibold">@item.Title</td>
+                        <td>@item.Author</td>
+                        <td>@item.Category</td>
+                        <td>@item.Year</td>
+                        <td>@item.TotalExamples</td>
+                        <td>
+                            @if (item.AvailableExamples > 0)
+                            {
+                                <span class="badge" style="background: var(--green);">
+                                    Доступно: @item.AvailableExamples
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Нет в наличии</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.CanReserve)
+                            {
+                                if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <form asp-action="Reserve"
+                                          asp-controller="ExampleBooks"
+                                          method="post"
+                                          class="d-inline">
+                                        <input type="hidden" name="versionBookId" value="@item.VersionBookId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            Забронировать
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <a asp-controller="Account" asp-action="Login"
+                                       asp-route-returnUrl="@Url.Action("Catalog","ExampleBooks")"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Войти, чтобы забронировать
+                                    </a>
+                                }
+                                
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                    Недоступно
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

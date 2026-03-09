@@ -1,184 +1,125 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using LibApp.Data;
+using LibApp.Models.ViewModels;
 using LibApp.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 
-namespace LibApp.Controllers
+public class ExampleBooksController : Controller
 {
-    [Authorize]
-    public class ExampleBooksController : Controller
+    private readonly AppDbContext _context;
+
+    public ExampleBooksController(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> Catalog(string? search, string? category)
+    {
+        var query = _context.VersionBooks
+            .Include(v => v.Book)
+            .ThenInclude(b => b.Author)
+            .Include(v => v.Book.Category)
+            .Include(v => v.ExampleBooks)
+            .AsQueryable();
 
-        public ExampleBooksController(AppDbContext context)
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            _context = context;
+            query = query.Where(v =>
+                v.Book.Name.Contains(search) ||
+                v.Book.Author.FullName.Contains(search));
         }
 
-        // GET: ExampleBooks
-        public async Task<IActionResult> Index()
+        if (!string.IsNullOrWhiteSpace(category))
         {
-            var appDbContext = _context.ExampleBooks.Include(e => e.VersionBook);
-            return View(await appDbContext.ToListAsync());
+            query = query.Where(v => v.Book.Category.Name == category);
         }
 
-        // GET: ExampleBooks/Details/5
-        public async Task<IActionResult> Details(long? id)
+        var versions = await query
+            .Include(v => v.ExampleBooks)
+            .ToListAsync();
+        
+        var versionIds = versions.SelectMany(v => v.ExampleBooks)
+                                 .Select(eb => eb.ExampleBookId)
+                                 .Distinct()
+                                 .ToList();
+
+        var loans = await _context.Loans
+            .Where(l => versionIds.Contains(l.ExampleBookId) &&
+                        l.ReturnedAt == null)
+            .ToListAsync();
+
+        var model = versions.Select(v =>
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            var exampleIds = v.ExampleBooks.Select(eb => eb.ExampleBookId).ToList();
+            var activeLoansForVersion = loans.Where(l => exampleIds.Contains(l.ExampleBookId)).ToList();
 
-            var exampleBook = await _context.ExampleBooks
-                .Include(e => e.VersionBook)
-                .FirstOrDefaultAsync(m => m.ExampleBookId == id);
-            if (exampleBook == null)
-            {
-                return NotFound();
-            }
+            var total = exampleIds.Count;
+            var busy = activeLoansForVersion.Count;
+            var available = total - busy;
 
-            return View(exampleBook);
+            return new VersionCatalogItem
+            {
+                VersionBookId = v.VersionBookId,
+                Title = v.Book.Name,
+                Author = v.Book.Author.FullName,
+                Category = v.Book.Category.Name,
+                Year = v.CreateAt.Year,
+                TotalExamples = total,
+                AvailableExamples = available
+            };
+        }).ToList();
+
+        ViewBag.Search = search;
+        ViewBag.SelectedCategory = category;
+        ViewBag.Categories = await _context.Categories
+            .Select(c => c.Name)
+            .ToListAsync();
+
+        return View(model);
+    }
+    
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reserve(long versionBookId)
+    {
+        var freeExample = await _context.ExampleBooks
+            .Where(eb => eb.VersionBookId == versionBookId)
+            .Where(eb => !_context.Loans
+                .Any(l => l.ExampleBookId == eb.ExampleBookId && l.ReturnedAt == null))
+            .FirstOrDefaultAsync();
+
+        if (freeExample == null)
+        {
+            TempData["Error"] = "К сожалению, свободных экземпляров нет.";
+            return RedirectToAction(nameof(Catalog), new { id = versionBookId });
+        }
+        
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Login == User.Identity!.Name);
+
+        if (user == null)
+        {
+            return RedirectToAction("Login", "Account");
         }
 
-        // GET: ExampleBooks/Create
-        public IActionResult Create()
+        var now = DateTime.UtcNow;
+        var loan = new Loan
         {
-            ViewData["VersionBookId"] = new SelectList(_context.VersionBooks, "VersionBookId", "Name");
-            return View();
-        }
+            UserId = user.UserId,
+            ExampleBookId = freeExample.ExampleBookId,
+            IssuedAt = now,
+            DueDate = now.AddDays(3),
+            ExtensionsCount = 0,
+            ReturnedAt = null
+        };
 
-        // POST: ExampleBooks/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ExampleBookId,VersionBookId")] ExampleBook exampleBook)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(exampleBook);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["VersionBookId"] = new SelectList(_context.VersionBooks, "VersionBookId", "Name", exampleBook.VersionBookId);
-            return View(exampleBook);
-        }
+        _context.Loans.Add(loan);
+        await _context.SaveChangesAsync();
 
-        // GET: ExampleBooks/Edit/5
-        public async Task<IActionResult> Edit(long? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var exampleBook = await _context.ExampleBooks.FindAsync(id);
-            if (exampleBook == null)
-            {
-                return NotFound();
-            }
-            ViewData["VersionBookId"] = new SelectList(_context.VersionBooks, "VersionBookId", "Name", exampleBook.VersionBookId);
-            return View(exampleBook);
-        }
-
-        // POST: ExampleBooks/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("ExampleBookId,VersionBookId")] ExampleBook exampleBook)
-        {
-            if (id != exampleBook.ExampleBookId)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(exampleBook);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ExampleBookExists(exampleBook.ExampleBookId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["VersionBookId"] = new SelectList(_context.VersionBooks, "VersionBookId", "Name", exampleBook.VersionBookId);
-            return View(exampleBook);
-        }
-
-        // GET: ExampleBooks/Delete/5
-        public async Task<IActionResult> Delete(long? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var exampleBook = await _context.ExampleBooks
-                .Include(e => e.VersionBook)
-                .FirstOrDefaultAsync(m => m.ExampleBookId == id);
-            if (exampleBook == null)
-            {
-                return NotFound();
-            }
-            
-            var hasRelations = await _context.Loans.AnyAsync(l => l.ExampleBookId == id);
-
-            if (hasRelations)
-            {
-                ViewBag.ErrorMessage = "Нельзя удалить экземпляр, так как есть связанные выдачи.";
-            }
-
-            return View(exampleBook);
-        }
-
-        // POST: ExampleBooks/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id)
-        {
-            var exampleBook = await _context.ExampleBooks
-                .Include(e => e.VersionBook)
-                .FirstOrDefaultAsync(m => m.ExampleBookId == id);
-            
-            var hasRelations = await _context.Loans.AnyAsync(l => l.ExampleBookId == id);
-            
-            if (hasRelations || exampleBook.VersionBook != null)
-            {
-                ViewBag.ErrorMessage = "Нельзя удалить экземпляр, так как есть связанные выдачи или издание.";
-                return View("Delete", exampleBook);
-            }
-            
-            if (exampleBook != null)
-            {
-                _context.ExampleBooks.Remove(exampleBook);
-            }
-
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        private bool ExampleBookExists(long id)
-        {
-            return _context.ExampleBooks.Any(e => e.ExampleBookId == id);
-        }
+        TempData["Success"] = "Книга забронирована. Подойдите в библиотеку в течение 3 дней.";
+        return RedirectToAction(nameof(Catalog));
     }
 }

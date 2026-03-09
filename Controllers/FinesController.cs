@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LibApp.Controllers
 {
-    [Authorize]
+    [Authorize(Roles="Admin, Librarian")]
     public class FinesController : Controller
     {
         private readonly AppDbContext _context;

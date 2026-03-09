@@ -1,0 +1,136 @@
+@model LibApp.Models.ViewModels.ProfileViewModel
+@{
+    ViewData["Title"] = "Профиль";
+    var now = DateTime.UtcNow;
+}
+
+@* Напоминания (баннеры вверху) *@
+@foreach (var loan in Model.SoonDue)
+{
+    var days = (int)(loan.DueDate - now).TotalDays;
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-2">
+        ⚠️ Книга <strong>«@loan.ExampleBook.VersionBook.Book.Name»</strong>
+        должна быть возвращена через <strong>@days дн.</strong>
+        Не забудьте продлить или сдать!
+    </div>
+}
+
+@* Шапка профиля *@
+<div class="card shadow-sm mb-4 p-4"
+     style="border-left: 5px solid var(--blue-dk);">
+    <div class="d-flex align-items-center gap-4">
+        <div style="width:72px; height:72px; border-radius:50%;
+                    background: var(--blue-lt);
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:28px; color:#fff;">
+            👤
+        </div>
+        <div>
+            <h4 class="mb-0 fw-bold">@Model.User.FullName</h4>
+            <div class="text-muted small">@Model.User.Email · @(Model.User.PhoneNumber ?? "—")</div>
+            <span class="badge mt-1" style="background: var(--blue-dk);">@Model.User.Role.Name</span>
+        </div>
+        <a asp-action="Edit" class="btn btn-sm btn-outline-secondary ms-auto">✏️ Редактировать</a>
+    </div>
+</div>
+
+@* Статистика *@
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center p-3 shadow-sm">
+            <div class="fs-2 fw-bold" style="color: var(--blue-dk);">@Model.ActiveLoans.Count</div>
+            <div class="text-muted small">На руках</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-3 shadow-sm">
+            <div class="fs-2 fw-bold" style="color: var(--green);">@Model.TotalRead</div>
+            <div class="text-muted small">Прочитано всего</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-3 shadow-sm">
+            <div class="fs-2 fw-bold" style="color: var(--purple);">@Model.Reservations.Count</div>
+            <div class="text-muted small">Забронировано</div>
+        </div>
+    </div>
+</div>
+
+@* Книги на руках *@
+@foreach (var loan in Model.ActiveLoans)
+{
+    var daysLeft = (int)(loan.DueDate - now).TotalDays;
+    var isOverdue = daysLeft < 0;
+    var cardBorder = isOverdue ? "var(--purple)" : daysLeft <= 3 ? "#e0a800" : "var(--green)";
+    var canExtend = !isOverdue && loan.ExtensionsCount == 0;
+
+    <div class="col-md-6">
+        <div class="card p-3 shadow-sm" style="border-left: 4px solid @cardBorder;">
+            <div class="fw-semibold">@loan.ExampleBook.VersionBook.Book.Name</div>
+            <div class="text-muted small">
+                @loan.ExampleBook.VersionBook.Book.Author.FullName
+                · @loan.ExampleBook.VersionBook.Book.Category.Name
+            </div>
+            <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                <span class="small">
+                    Вернуть до <strong>@loan.DueDate.ToString("dd.MM.yyyy")</strong>
+                </span>
+
+                @if (isOverdue)
+                {
+                    <span class="badge" style="background: var(--purple);">
+                        ⚠️ @daysLeft дн.
+                    </span>
+                }
+                else if (daysLeft <= 3)
+                {
+                    <span class="badge bg-warning text-dark">
+                        ⚠️ @daysLeft дн.
+                    </span>
+                }
+
+                @* Кнопка продления *@
+                @if (canExtend)
+                {
+                    <form asp-action="Extend" method="post" class="d-inline m-0">
+                        <input type="hidden" name="loanId" value="@loan.LoanId" />
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                            🔄 Продлить
+                        </button>
+                    </form>
+                }
+                else if (!isOverdue && loan.ExtensionsCount >= 1)
+                {
+                    <span class="text-muted small fst-italic">
+                        продление — у библиотекаря
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+
+@* Бронирования *@
+@if (Model.Reservations.Any())
+{
+    <h5 class="fw-bold mb-3" style="color: var(--blue-dk);">📌 Бронирования</h5>
+    <div class="row g-3">
+        @foreach (var r in Model.Reservations)
+        {
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm" style="border-left: 4px solid var(--blue-lt);">
+                    <div class="fw-semibold">@r.ExampleBook.VersionBook.Book.Name</div>
+                    <div class="text-muted small">
+                        @r.ExampleBook.VersionBook.Book.Author.FullName
+                    </div>
+                    <div class="small mt-1 text-muted">
+                        Забронирована до @r.DueDate.ToString("dd.MM.yyyy") — подойдите на абонемент
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+

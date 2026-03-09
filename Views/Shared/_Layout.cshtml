@@ -1,4 +1,12 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var ctrl   = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+
+    string NavClass(string controller, string act = "Index")
+        => ctrl == controller && action == act ? "active" : "";
+}
+
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8"/>
@@ -23,7 +31,6 @@
             color: #333;
         }
 
-        /* NAV */
         .lib-nav {
             background: var(--blue-dk);
             padding: 0 32px;
@@ -45,11 +52,10 @@
             color: var(--gray);
             text-decoration: none;
             font-size: 14px;
+            white-space: nowrap;
         }
 
-        .lib-nav a:hover {
-            color: #fff;
-        }
+        .lib-nav a:hover { color: #fff; }
 
         .lib-nav a.active {
             color: #fff;
@@ -57,7 +63,35 @@
             padding-bottom: 2px;
         }
 
-        .lib-nav .btn-logout {
+        /* Аватар + имя */
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 8px;
+        }
+
+        .nav-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--blue-lt);
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .nav-user-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-logout {
             background: transparent;
             border: 1.5px solid var(--gray);
             color: var(--gray);
@@ -66,14 +100,12 @@
             font-size: 13px;
             cursor: pointer;
             transition: all .2s;
+            white-space: nowrap;
         }
 
-        .lib-nav .btn-logout:hover {
-            border-color: #fff;
-            color: #fff;
-        }
+        .btn-logout:hover { border-color: #fff; color: #fff; }
 
-        .lib-nav .btn-login {
+        .btn-login {
             background: var(--blue-lt);
             border: none;
             color: #fff;
@@ -84,14 +116,11 @@
             cursor: pointer;
             text-decoration: none;
             transition: opacity .2s;
+            white-space: nowrap;
         }
 
-        .lib-nav .btn-login:hover {
-            opacity: .85;
-            color: #fff;
-        }
+        .btn-login:hover { opacity: .85; color: #fff; }
 
-        /* FOOTER */
         .lib-footer {
             background: var(--blue-dk);
             color: var(--gray);
@@ -101,35 +130,36 @@
             margin-top: 40px;
         }
 
-        .lib-footer a {
-            color: var(--blue-lt);
-            text-decoration: none;
-        }
-
-        .lib-footer a:hover {
-            color: #fff;
-        }
+        .lib-footer a { color: var(--blue-lt); text-decoration: none; }
+        .lib-footer a:hover { color: #fff; }
     </style>
 </head>
 <body>
 
 <header>
     <nav class="lib-nav">
-        <a class="nav-logo" asp-area="" asp-controller="Home" asp-action="Index">Библиотека</a>
-
-        <a asp-area="" asp-controller="Home" asp-action="Index">Главная</a>
-        <a asp-area="" asp-controller="Books" asp-action="Index">Каталог</a>
-        <a asp-area="" asp-controller="Home" asp-action="Privacy">Политика</a>
+        <a class="nav-logo" asp-controller="Home" asp-action="Index">📚 БиблиоСистема</a>
+        <a asp-controller="Home"         asp-action="Index"   class="@NavClass("Home")">Главная</a>
+        <a asp-controller="ExampleBooks" asp-action="Catalog" class="@NavClass("ExampleBooks", "Catalog")">Каталог</a>
 
         @if (User.Identity?.IsAuthenticated == true)
         {
-        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline m-0">
-            <button type="submit" class="btn-logout">Выйти</button>
-        </form>
+            <a asp-controller="Profile" asp-action="Index"
+               class="@NavClass("Profile")">Мои книги</a>
+            <div class="nav-user">
+                <div class="nav-avatar">
+                    @(User.Identity.Name?.Substring(0, 1).ToUpper())
+                </div>
+                <span class="nav-user-name">@User.Identity.Name</span>
+            </div>
+
+            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline m-0">
+                <button type="submit" class="btn-logout">Выйти</button>
+            </form>
         }
         else
         {
-        <a asp-controller="Account" asp-action="Login" class="btn-login">Войти</a>
+            <a asp-controller="Account" asp-action="Login" class="btn-login">Войти</a>
         }
     </nav>
 </header>
@@ -141,7 +171,8 @@
 </div>
 
 <footer class="lib-footer">
-    &copy; 2026 БиблиоСистема &mdash; <a asp-area="" asp-controller="Home" asp-action="Privacy">Политика конфиденциальности</a>
+    &copy; 2026 БиблиоСистема &mdash;
+    <a asp-controller="Home" asp-action="Privacy">Политика конфиденциальности</a>
 </footer>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>

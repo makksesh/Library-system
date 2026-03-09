@@ -46,6 +46,7 @@ namespace LibApp.Controllers
         }
 
         // GET: Publishers/Create
+        [Authorize(Roles="Admin, Librarian")]
         public IActionResult Create()
         {
             return View();
@@ -56,6 +57,7 @@ namespace LibApp.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Create([Bind("PublisherId,Name,Description,Address")] Publisher publisher)
         {
             if (ModelState.IsValid)
@@ -68,6 +70,7 @@ namespace LibApp.Controllers
         }
 
         // GET: Publishers/Edit/5
+        [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -88,6 +91,7 @@ namespace LibApp.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Edit(long id, [Bind("PublisherId,Name,Description,Address")] Publisher publisher)
         {
             if (id != publisher.PublisherId)
@@ -119,6 +123,7 @@ namespace LibApp.Controllers
         }
 
         // GET: Publishers/Delete/5
+        [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -139,6 +144,7 @@ namespace LibApp.Controllers
         // POST: Publishers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var publisher = await _context.Publishers.FindAsync(id);

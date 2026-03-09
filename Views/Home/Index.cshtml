@@ -1,61 +1,163 @@
 ﻿@{
     ViewData["Title"] = "Главная";
+    var isAdmin     = User.IsInRole("Admin");
+    var isLibrarian = User.IsInRole("Librarian");
+    var isReader    = User.IsInRole("Reader");
+    var isStaff     = isAdmin || isLibrarian;
 }
 
-<div class="container mt-4">
+@if (isStaff)
+{
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold mb-0" style="color: var(--blue-dk);">Панель управления</h3>
+            <span class="text-muted small">
+                Добро пожаловать, @User.Identity!.Name
+                &nbsp;·&nbsp;
+                <span class="badge" style="background: var(--blue-lt);">
+                    @(isAdmin ? "Администратор" : "Библиотекарь")
+                </span>
+            </span>
+        </div>
+    </div>
 
-    @if (User.Identity.IsAuthenticated)
-    {
-        <div class="card p-4 mb-4 shadow-sm">
-            <h4>Вы вошли в систему как, <strong>@User.Identity.Name</strong>!</h4>
+    <div class="row g-3">
 
-            <form asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger btn-sm">
-                    Выйти из аккаунта
-                </button>
-            </form>
+        <div class="col-12">
+            <div class="text-muted small fw-semibold text-uppercase mb-2"
+                 style="letter-spacing:.05em;">📚 Книжный фонд</div>
         </div>
 
-        <h5>Разделы системы:</h5>
-        <ul class="list-group w-50">
-            <li class="list-group-item">
-                <a asp-controller="Authors" asp-action="Index">Aвторы</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Books" asp-action="Index">Книги</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Categories" asp-action="Index">Жанры</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="ExampleBooks" asp-action="Index">Экземпляры книг</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Fines" asp-action="Index">Штрафы</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Loans" asp-action="Index">Выдачи</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Publishers" asp-action="Index">Издатели</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Roles" asp-action="Index">Роли</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="Users" asp-action="Index">Пользователи</a>
-            </li>
-            <li class="list-group-item">
-                <a asp-controller="VersionBooks" asp-action="Index">Издания</a>
-            </li>
-        </ul>
-    }
-    else
-    {
-        <div class="alert alert-info">
-            Пожалуйста, <a asp-controller="Accounts" asp-action="Login">войдите в систему</a>, чтобы продолжить.
-        </div>
-    }
+        @{
+            var fundCards = new (string Controller, string Action, string Icon, string Title, string Desc)[]
+            {
+                ("Authors",      "Index", "✍️",  "Авторы",      "Управление авторами книг"),
+                ("Books",        "Index", "📖",  "Книги",       "Каталог произведений"),
+                ("VersionBooks", "Index", "🖨️",  "Издания",     "Версии и тиражи книг"),
+                ("ExampleBooks", "Index", "📦",  "Экземпляры",  "Физические экземпляры"),
+                ("Categories",   "Index", "🏷️",  "Жанры",       "Классификация"),
+                ("Publishers",   "Index", "🏢",  "Издатели",    "Издательские дома"),
+            };
+        }
 
-</div>
+        @foreach (var card in fundCards)
+        {
+            <div class="col-md-4 col-lg-3">
+                <a asp-controller="@card.Controller" asp-action="@card.Action"
+                   class="text-decoration-none">
+                    <div class="card h-100 shadow-sm p-3 card-hover">
+                        <div class="fs-2 mb-2">@card.Icon</div>
+                        <div class="fw-semibold" style="color: var(--blue-dk);">@card.Title</div>
+                        <div class="text-muted small">@card.Desc</div>
+                    </div>
+                </a>
+            </div>
+        }
+
+        <div class="col-12 mt-2">
+            <div class="text-muted small fw-semibold text-uppercase mb-2"
+                 style="letter-spacing:.05em;">🔄 Обслуживание читателей</div>
+        </div>
+
+        @{
+            var serviceCards = new (string Controller, string Action, string Icon, string Title, string Desc)[]
+            {
+                ("Loans", "Index", "📋", "Выдачи", "Активные и закрытые выдачи"),
+                ("Fines", "Index", "💰", "Штрафы", "Штрафы и задолженности"),
+            };
+        }
+
+        @foreach (var card in serviceCards)
+        {
+            <div class="col-md-4 col-lg-3">
+                <a asp-controller="@card.Controller" asp-action="@card.Action"
+                   class="text-decoration-none">
+                    <div class="card h-100 shadow-sm p-3 card-hover">
+                        <div class="fs-2 mb-2">@card.Icon</div>
+                        <div class="fw-semibold" style="color: var(--blue-dk);">@card.Title</div>
+                        <div class="text-muted small">@card.Desc</div>
+                    </div>
+                </a>
+            </div>
+        }
+
+        @if (isAdmin)
+        {
+            <div class="col-12 mt-2">
+                <div class="text-muted small fw-semibold text-uppercase mb-2"
+                     style="letter-spacing:.05em;">⚙️ Администрирование</div>
+            </div>
+
+            
+            var adminCards = new (string Controller, string Action, string Icon, string Title, string Desc)[]
+            {
+                ("Users", "Index", "👥", "Пользователи", "Управление учётными записями"),
+                ("Roles", "Index", "🔑", "Роли",          "Права доступа"),
+            };
+            
+
+            @foreach (var card in adminCards)
+            {
+                <div class="col-md-4 col-lg-3">
+                    <a asp-controller="@card.Controller" asp-action="@card.Action"
+                       class="text-decoration-none">
+                        <div class="card h-100 shadow-sm p-3 card-hover"
+                             style="border-left: 4px solid var(--purple);">
+                            <div class="fs-2 mb-2">@card.Icon</div>
+                            <div class="fw-semibold" style="color: var(--blue-dk);">@card.Title</div>
+                            <div class="text-muted small">@card.Desc</div>
+                        </div>
+                    </a>
+                </div>
+            }
+        }
+
+    </div>
+}
+else if (isReader)
+{
+    <div class="text-center py-5">
+        <div style="font-size: 64px;">📚</div>
+        <h3 class="fw-bold mt-3" style="color: var(--blue-dk);">
+            Добро пожаловать в БиблиоСистему
+        </h3>
+        <p class="text-muted mb-4">
+            Привет, <strong>@User.Identity!.Name</strong>!
+            Ищи книги, бронируй и следи за своими выдачами.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a asp-controller="ExampleBooks" asp-action="Catalog"
+               class="btn btn-primary px-4">📖 Перейти в каталог</a>
+            <a asp-controller="Profile" asp-action="Index"
+               class="btn btn-outline-secondary px-4">👤 Мой профиль</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <div style="font-size: 64px;">🏛️</div>
+        <h3 class="fw-bold mt-3" style="color: var(--blue-dk);">Городская библиотека</h3>
+        <p class="text-muted mb-4" style="max-width: 480px; margin: 0 auto 24px;">
+            Найдите нужную книгу, узнайте о её наличии и забронируйте онлайн.
+            Для бронирования необходимо войти в систему.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a asp-controller="ExampleBooks" asp-action="Catalog"
+               class="btn btn-primary px-4">📖 Открыть каталог</a>
+            <a asp-controller="Account" asp-action="Login"
+               class="btn btn-outline-secondary px-4">Войти</a>
+        </div>
+    </div>
+}
+
+<style>
+    .card-hover {
+        transition: transform .15s, box-shadow .15s;
+        cursor: pointer;
+    }
+    .card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(31,59,96,.15) !important;
+    }
+</style>
