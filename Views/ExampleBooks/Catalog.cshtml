@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Каталог";
     var categories = ViewBag.Categories as List<string> ?? new();
+    var isReader    = User.IsInRole("Reader");
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -100,7 +101,7 @@ else
                         <td>
                             @if (item.CanReserve)
                             {
-                                if (User.Identity?.IsAuthenticated == true)
+                                if (User.Identity?.IsAuthenticated == true && isReader)
                                 {
                                     <form asp-action="Reserve"
                                           asp-controller="ExampleBooks"
@@ -111,6 +112,14 @@ else
                                             Забронировать
                                         </button>
                                     </form>
+                                }
+                                else if (User.Identity?.IsAuthenticated == true && !isReader)
+                                {
+                                    <a asp-controller="Profile" asp-action="Index"
+                                       asp-route-returnUrl="@Url.Action("Index","Profile")"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Вы не можете забронировать
+                                    </a>
                                 }
                                 else
                                 {
