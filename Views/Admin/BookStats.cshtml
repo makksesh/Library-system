@@ -1,0 +1,83 @@
+@model List<LibApp.Models.ViewModels.AdminBookStatsItem>
+@{
+    ViewData["Title"] = "Статистика книг";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">
+        <i class="bi bi-bar-chart-line me-2"></i>Статистика книг
+    </h2>
+    <form method="get" class="d-flex gap-2 mb-4">
+        <input type="text"
+               name="search"
+               value="@ViewBag.Search"
+               class="form-control"
+               placeholder="Поиск по названию или автору..." />
+        <button type="submit" class="btn btn-primary">Найти</button>
+        @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+        {
+            <a href="@Url.Action("BookStats")" class="btn btn-outline-secondary">Сбросить</a>
+        }
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">Книги не найдены.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Название</th>
+                        <th>Автор</th>
+                        <th class="text-center">Всего экземпляров</th>
+                        <th class="text-center">Выдано</th>
+                        <th class="text-center">Доступно</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Title</td>
+                            <td class="text-muted">@item.Author</td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary fs-6">@item.TotalCopies</span>
+                            </td>
+                            <td class="text-center">
+                                @if (item.IssuedCount > 0)
+                                {
+                                    <span class="badge bg-warning text-dark fs-6">@item.IssuedCount</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (item.AvailableCount > 0)
+                                {
+                                    <span class="badge bg-success fs-6">@item.AvailableCount</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger fs-6">0</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-secondary fw-bold">
+                    <tr>
+                        <td colspan="2">Итого книг: @Model.Count</td>
+                        <td class="text-center">@Model.Sum(x => x.TotalCopies)</td>
+                        <td class="text-center">@Model.Sum(x => x.IssuedCount)</td>
+                        <td class="text-center">@Model.Sum(x => x.AvailableCount)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</div>

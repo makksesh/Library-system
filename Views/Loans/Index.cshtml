@@ -4,6 +4,7 @@
     ViewData["Title"] = "Index";
 }
 
+
 <h1>Выдачи</h1>
 
 <p>
@@ -34,7 +35,7 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+    @foreach (var item in Model) {
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.IssuedAt)
@@ -58,8 +59,18 @@
                 <a asp-action="Edit" asp-route-id="@item.LoanId">Изменить</a> |
                 <a asp-action="Details" asp-route-id="@item.LoanId">Подробнее</a> |
                 <a asp-action="Delete" asp-route-id="@item.LoanId">Удалить</a>
+                @if (item.ReturnedAt == null)
+                {
+                    <span> | </span>
+                    <a asp-controller="ReturnBook" asp-action="Accept"
+                       asp-route-loanId="@item.LoanId"
+                       class="btn btn-sm btn-outline-primary">
+                        📥 Принять
+                    </a>
+                }
             </td>
         </tr>
-}
+    }
     </tbody>
+
 </table>

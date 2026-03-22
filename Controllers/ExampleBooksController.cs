@@ -85,6 +85,37 @@ public class ExampleBooksController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reserve(long versionBookId)
     {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Login == User.Identity!.Name);
+
+        if (user == null)
+            return RedirectToAction("Login", "Account");
+
+
+        var hasUnpaidFines = await _context.Fines
+            .AnyAsync(f => f.ReaderId == user.UserId && f.PaidAt == null);
+
+        if (hasUnpaidFines)
+        {
+            TempData["Error"] = "Бронирование недоступно: у вас есть неоплаченные штрафы.";
+            return RedirectToAction(nameof(Catalog));
+        }
+
+
+        // Бронь = активный заём с DueDate - IssuedAt <= 3 дней
+        var activeReservationsCount = await _context.Loans
+            .CountAsync(l =>
+                l.UserId == user.UserId &&
+                l.ReturnedAt == null &&
+                (l.DueDate - l.IssuedAt).TotalDays <= 3);
+
+        if (activeReservationsCount >= 3)
+        {
+            TempData["Error"] = "Бронирование недоступно: нельзя иметь более 3 активных бронирований.";
+            return RedirectToAction(nameof(Catalog));
+        }
+
+
         var freeExample = await _context.ExampleBooks
             .Where(eb => eb.VersionBookId == versionBookId)
             .Where(eb => !_context.Loans
@@ -93,16 +124,8 @@ public class ExampleBooksController : Controller
 
         if (freeExample == null)
         {
-            TempData["Error"] = "К сожалению, свободных экземпляров нет.";
+            TempData["Error"] = "Нет доступных экземпляров.";
             return RedirectToAction(nameof(Catalog), new { id = versionBookId });
-        }
-        
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Login == User.Identity!.Name);
-
-        if (user == null)
-        {
-            return RedirectToAction("Login", "Account");
         }
 
         var now = DateTime.UtcNow;
@@ -111,7 +134,7 @@ public class ExampleBooksController : Controller
             UserId = user.UserId,
             ExampleBookId = freeExample.ExampleBookId,
             IssuedAt = now,
-            DueDate = now.AddDays(3),
+            DueDate = now.AddDays(3), 
             ExtensionsCount = 0,
             ReturnedAt = null
         };
@@ -119,7 +142,8 @@ public class ExampleBooksController : Controller
         _context.Loans.Add(loan);
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = "Книга забронирована. Подойдите в библиотеку в течение 3 дней.";
+        TempData["Success"] = "Книга успешно забронирована. Срок — 3 дня.";
         return RedirectToAction(nameof(Catalog));
     }
+
 }

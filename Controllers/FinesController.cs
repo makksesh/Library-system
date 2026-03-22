@@ -47,18 +47,14 @@ namespace LibApp.Controllers
 
             return View(fine);
         }
-
-        // GET: Fines/Create
+        
         public IActionResult Create()
         {
             ViewData["LibrarianId"] = new SelectList(_context.Users, "UserId", "Email");
             ViewData["ReaderId"] = new SelectList(_context.Users, "UserId", "Email");
             return View();
         }
-
-        // POST: Fines/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("FineId,ReaderId,LibrarianId,Amount,IssuedAt,PaidAt,Reason")] Fine fine)
@@ -78,8 +74,7 @@ namespace LibApp.Controllers
             ViewData["ReaderId"] = new SelectList(_context.Users, "UserId", "Email", fine.ReaderId);
             return View(fine);
         }
-
-        // GET: Fines/Edit/5
+        
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -96,10 +91,7 @@ namespace LibApp.Controllers
             ViewData["ReaderId"] = new SelectList(_context.Users, "UserId", "Email", fine.ReaderId);
             return View(fine);
         }
-
-        // POST: Fines/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id, [Bind("FineId,ReaderId,LibrarianId,Amount,IssuedAt,PaidAt,Reason")] Fine fine)
@@ -138,8 +130,7 @@ namespace LibApp.Controllers
             ViewData["ReaderId"] = new SelectList(_context.Users, "UserId", "Email", fine.ReaderId);
             return View(fine);
         }
-
-        // GET: Fines/Delete/5
+        
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -158,8 +149,7 @@ namespace LibApp.Controllers
 
             return View(fine);
         }
-
-        // POST: Fines/Delete/5
+        
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

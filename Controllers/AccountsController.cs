@@ -57,8 +57,7 @@ public class AccountController : Controller
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             principal);
-
-        //await SignInUser(user);
+        
         return RedirectToAction("Index", "Home");
     }
 
@@ -113,7 +112,8 @@ public class AccountController : Controller
         return RedirectToAction("Login", "Account");
     }
 
-    // ─── Приватные хелперы ────────────────────────────────────
+
+    #region Helpers
 
     private static string HashPassword(string password)
     {
@@ -140,4 +140,6 @@ public class AccountController : Controller
             new AuthenticationProperties { IsPersistent = true }
         );
     }
+
+    #endregion
 }

@@ -17,14 +17,12 @@ namespace LibApp.Controllers
             _context = context;
         }
 
-        // GET: VersionBooks
         public async Task<IActionResult> Index()
         {
             var appDbContext = _context.VersionBooks.Include(v => v.Book).Include(v => v.Publisher);
             return View(await appDbContext.ToListAsync());
         }
 
-        // GET: VersionBooks/Details/5
         public async Task<IActionResult> Details(long? id)
         {
             if (id == null)
@@ -44,17 +42,13 @@ namespace LibApp.Controllers
             return View(versionBook);
         }
 
-        // GET: VersionBooks/Create
         public IActionResult Create()
         {
             ViewData["BookId"] = new SelectList(_context.Books, "BookId", "Name");
             ViewData["PublisherId"] = new SelectList(_context.Publishers, "PublisherId", "Name");
             return View();
         }
-
-        // POST: VersionBooks/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("VersionBookId,PublisherId,BookId,Name,CreateAt,CountSheets")] VersionBook versionBook)
@@ -71,8 +65,7 @@ namespace LibApp.Controllers
             ViewData["PublisherId"] = new SelectList(_context.Publishers, "PublisherId", "Name", versionBook.PublisherId);
             return View(versionBook);
         }
-
-        // GET: VersionBooks/Edit/5
+        
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -90,9 +83,6 @@ namespace LibApp.Controllers
             return View(versionBook);
         }
 
-        // POST: VersionBooks/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id, [Bind("VersionBookId,PublisherId,BookId,Name,CreateAt,CountSheets")] VersionBook versionBook)
@@ -128,7 +118,6 @@ namespace LibApp.Controllers
             return View(versionBook);
         }
 
-        // GET: VersionBooks/Delete/5
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -156,7 +145,6 @@ namespace LibApp.Controllers
             return View(versionBook);
         }
 
-        // POST: VersionBooks/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

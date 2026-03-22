@@ -21,7 +21,6 @@ public class ProfileController : Controller
 
     public async Task<IActionResult> Index()
     {
-        // ищем текущего пользователя по Login из Claims
         var user = await _context.Users
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Login == User.Identity!.Name);
@@ -29,8 +28,7 @@ public class ProfileController : Controller
         if (user == null) return RedirectToAction("Login", "Account");
 
         var now = DateTime.UtcNow;
-
-        // Все активные записи Loan для пользователя
+        
         var allActiveLoans = await _context.Loans
             .Where(l => l.UserId == user.UserId && l.ReturnedAt == null)
             .Include(l => l.ExampleBook)
@@ -46,7 +44,6 @@ public class ProfileController : Controller
 
         // Разделяем: бронь = DueDate <= 3 дней с момента IssuedAt (короткий срок)
         // Реальная выдача = DueDate > 3 дней с IssuedAt
-        // (логика зависит от твоей договорённости — здесь по сроку)
         var reservations = allActiveLoans
             .Where(l => (l.DueDate - l.IssuedAt).TotalDays <= 3)
             .ToList();
@@ -54,13 +51,18 @@ public class ProfileController : Controller
         var activeLoans = allActiveLoans
             .Where(l => (l.DueDate - l.IssuedAt).TotalDays > 3)
             .ToList();
+        
+        var fines = await _context.Fines
+            .Where(f => f.ReaderId == user.UserId)
+            .OrderByDescending(f => f.IssuedAt)
+            .ToListAsync();
 
-        // Напоминания: книги, которые нужно вернуть в течение SoonDaysTreshold дней
+
         var soonDue = activeLoans
             .Where(l => (l.DueDate - now).TotalDays <= SoonDaysTreshold)
             .ToList();
 
-        // Всего прочитано (возвращённые)
+
         var totalRead = await _context.Loans
             .CountAsync(l => l.UserId == user.UserId && l.ReturnedAt != null);
 
@@ -70,13 +72,13 @@ public class ProfileController : Controller
             ActiveLoans = activeLoans,
             Reservations = reservations,
             SoonDue = soonDue,
-            TotalRead = totalRead
+            TotalRead = totalRead,
+            Fines = fines 
         };
 
         return View(vm);
     }
-
-    // Редактирование только своего профиля
+    
     [HttpGet]
     public async Task<IActionResult> Edit()
     {
@@ -85,13 +87,11 @@ public class ProfileController : Controller
         if (user == null) return NotFound();
         return View(user);
     }
-
-    // POST: /Profile/Edit
+    
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit([Bind("UserId,FullName,Email,PhoneNumber")] User edited)
     {
-        // Убираем валидацию полей, которые мы не редактируем
         ModelState.Remove("Login");
         ModelState.Remove("HashPass");
         ModelState.Remove("Role");
@@ -104,8 +104,7 @@ public class ProfileController : Controller
             .FirstOrDefaultAsync(u => u.Login == User.Identity!.Name);
 
         if (user == null) return NotFound();
-
-        // Проверяем уникальность Email (если изменился)
+        
         var emailTaken = await _context.Users
             .AnyAsync(u => u.Email == edited.Email && u.UserId != user.UserId);
 
@@ -115,7 +114,6 @@ public class ProfileController : Controller
             return View(edited);
         }
 
-        // Обновляем только безопасные поля
         user.FullName    = edited.FullName;
         user.Email       = edited.Email;
         user.PhoneNumber = edited.PhoneNumber;
@@ -125,8 +123,7 @@ public class ProfileController : Controller
         TempData["Success"] = "Профиль успешно обновлён.";
         return RedirectToAction(nameof(Index));
     }
-    
-    // POST: /Profile/Extend/5
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Extend(long loanId)
@@ -141,14 +138,12 @@ public class ProfileController : Controller
 
         if (loan == null) return NotFound();
 
-        // Проверка: не просрочена
         if (loan.DueDate < DateTime.UtcNow)
         {
             TempData["Error"] = "Нельзя продлить просроченную книгу. Обратитесь к библиотекарю.";
             return RedirectToAction(nameof(Index));
         }
 
-        // Проверка: не больше 1 самостоятельного продления
         if (loan.ExtensionsCount >= 1)
         {
             TempData["Error"] = "Самостоятельное продление уже использовано. Обратитесь к библиотекарю.";
@@ -163,5 +158,28 @@ public class ProfileController : Controller
         TempData["Success"] = "Срок возврата продлён на 14 дней.";
         return RedirectToAction(nameof(Index));
     }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PayFine(long fineId)
+    {
+        var userLogin = User.Identity!.Name;
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Login == userLogin);
+
+        if (user == null) return NotFound();
+
+        var fine = await _context.Fines
+            .FirstOrDefaultAsync(f => f.FineId == fineId && f.ReaderId == user.UserId);
+
+        if (fine == null) return NotFound();
+
+        fine.PaidAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = "Штраф успешно оплачен.";
+        return RedirectToAction(nameof(Index));
+    }
+
 
 }

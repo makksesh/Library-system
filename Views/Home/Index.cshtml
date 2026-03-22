@@ -34,7 +34,7 @@
                 ("Authors",      "Index", "✍️",  "Авторы",      "Управление авторами книг"),
                 ("Books",        "Index", "📖",  "Книги",       "Каталог произведений"),
                 ("VersionBooks", "Index", "🖨️",  "Издания",     "Версии и тиражи книг"),
-                ("ExampleBooks", "Index", "📦",  "Экземпляры",  "Физические экземпляры"),
+                //("ExampleBooks", "Index", "📦",  "Экземпляры",  "Физические экземпляры"),
                 ("Categories",   "Index", "🏷️",  "Жанры",       "Классификация"),
                 ("Publishers",   "Index", "🏢",  "Издатели",    "Издательские дома"),
             };
@@ -54,32 +54,37 @@
             </div>
         }
 
-        <div class="col-12 mt-2">
-            <div class="text-muted small fw-semibold text-uppercase mb-2"
-                 style="letter-spacing:.05em;">🔄 Обслуживание читателей</div>
-        </div>
-
-        @{
+        @if (isLibrarian)
+        {
+            <div class="col-12 mt-2">
+                <div class="text-muted small fw-semibold text-uppercase mb-2"
+                     style="letter-spacing:.05em;">🔄 Обслуживание читателей</div>
+            </div>
+            
             var serviceCards = new (string Controller, string Action, string Icon, string Title, string Desc)[]
             {
                 ("Loans", "Index", "📋", "Выдачи", "Активные и закрытые выдачи"),
                 ("Fines", "Index", "💰", "Штрафы", "Штрафы и задолженности"),
+                ("Librarian",  "Index", "🔍", "Найти читателя",    "Поиск по ID, выдача, штрафы"),
             };
-        }
+            
+        
 
-        @foreach (var card in serviceCards)
-        {
-            <div class="col-md-4 col-lg-3">
-                <a asp-controller="@card.Controller" asp-action="@card.Action"
-                   class="text-decoration-none">
-                    <div class="card h-100 shadow-sm p-3 card-hover">
-                        <div class="fs-2 mb-2">@card.Icon</div>
-                        <div class="fw-semibold" style="color: var(--blue-dk);">@card.Title</div>
-                        <div class="text-muted small">@card.Desc</div>
-                    </div>
-                </a>
-            </div>
+            @foreach (var card in serviceCards)
+            {
+                <div class="col-md-4 col-lg-3">
+                    <a asp-controller="@card.Controller" asp-action="@card.Action"
+                       class="text-decoration-none">
+                        <div class="card h-100 shadow-sm p-3 card-hover">
+                            <div class="fs-2 mb-2">@card.Icon</div>
+                            <div class="fw-semibold" style="color: var(--blue-dk);">@card.Title</div>
+                            <div class="text-muted small">@card.Desc</div>
+                        </div>
+                    </a>
+                </div>
+            }
         }
+        
 
         @if (isAdmin)
         {
@@ -89,10 +94,11 @@
             </div>
 
             
-            var adminCards = new (string Controller, string Action, string Icon, string Title, string Desc)[]
-            {
-                ("Users", "Index", "👥", "Пользователи", "Управление учётными записями"),
-                ("Roles", "Index", "🔑", "Роли",          "Права доступа"),
+            var adminCards = new[] {
+                (Controller: "Users",  Action: "Index", Icon: "👥", Title: "Пользователи", Desc: "..."),
+                (Controller: "Roles",  Action: "Index", Icon: "🔐", Title: "Роли",         Desc: "..."),
+                // 👇 Новая карточка
+                (Controller: "Admin",  Action: "BookStats", Icon: "📊", Title: "Статистика книг", Desc: "Выдано, доступно, всего экземпляров"),
             };
             
 

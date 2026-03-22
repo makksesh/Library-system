@@ -21,8 +21,7 @@ namespace LibApp.Controllers
         {
             return View(await _context.Authors.ToListAsync());
         }
-
-        // GET: Authors/Details/5
+        
         public async Task<IActionResult> Details(long? id)
         {
             if (id == null)
@@ -39,16 +38,12 @@ namespace LibApp.Controllers
 
             return View(author);
         }
-
-        // GET: Authors/Create
+        
         public IActionResult Create()
         {
             return View();
         }
-
-        // POST: Authors/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("FullName,Bio")] Author author)
@@ -61,8 +56,7 @@ namespace LibApp.Controllers
             }
             return View(author);
         }
-
-        // GET: Authors/Edit/5
+        
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -77,10 +71,7 @@ namespace LibApp.Controllers
             }
             return View(author);
         }
-
-        // POST: Authors/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id, [Bind("AuthorId,FullName,Bio")] Author author)
@@ -112,8 +103,7 @@ namespace LibApp.Controllers
             }
             return View(author);
         }
-
-        // GET: Authors/Delete/5
+        
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -138,8 +128,7 @@ namespace LibApp.Controllers
 
             return View(author);
         }
-
-        // POST: Authors/Delete/5
+        
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

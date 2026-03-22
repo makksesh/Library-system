@@ -20,15 +20,13 @@ namespace LibApp.Controllers
         {
             _context = context;
         }
-
-        // GET: Users
+        
         public async Task<IActionResult> Index()
         {
             var appDbContext = _context.Users.Include(u => u.Role);
             return View(await appDbContext.ToListAsync());
         }
 
-        // GET: Users/Details/5
         public async Task<IActionResult> Details(long? id)
         {
             if (id == null)
@@ -46,17 +44,13 @@ namespace LibApp.Controllers
 
             return View(user);
         }
-
-        // GET: Users/Create
+        
         public IActionResult Create()
         {
             ViewData["RoleId"] = new SelectList(_context.Roles, "RoleId", "Name");
             return View();
         }
 
-        // POST: Users/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("UserId,RoleId,Login,HashPass,Email,FullName,PhoneNumber")] User user)
@@ -71,7 +65,6 @@ namespace LibApp.Controllers
             return View(user);
         }
 
-        // GET: Users/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -88,9 +81,6 @@ namespace LibApp.Controllers
             return View(user);
         }
 
-        // POST: Users/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id, [Bind("UserId,RoleId,Login,HashPass,Email,FullName,PhoneNumber")] User user)
@@ -123,8 +113,7 @@ namespace LibApp.Controllers
             ViewData["RoleId"] = new SelectList(_context.Roles, "RoleId", "Name", user.RoleId);
             return View(user);
         }
-
-        // GET: Users/Delete/5
+        
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -157,8 +146,7 @@ namespace LibApp.Controllers
 
             return View(user);
         }
-
-        // POST: Users/Delete/5
+        
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

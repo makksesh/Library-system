@@ -1,0 +1,124 @@
+@model LibApp.Models.ViewModels.ReturnBookViewModel
+@{
+    ViewData["Title"] = "Приём книги";
+    var loan = Model.Loan;
+    var book = loan.ExampleBook?.VersionBook?.Book;
+    var author = book?.Author;
+    var publisher = loan.ExampleBook?.VersionBook?.Publisher;
+}
+
+<div class="container mt-4" style="max-width: 680px;">
+    <h4 class="mb-4">📚 Приём книги</h4>
+
+    @* Карточка выдачи — подсвечивается желтым если просрочка *@
+    <div class="card mb-4 @(Model.IsOverdue ? "border-warning" : "border-success")"
+         style="@(Model.IsOverdue ? "background-color: #fffbe6;" : "")">
+        <div class="card-header d-flex justify-content-between align-items-center
+                    @(Model.IsOverdue ? "bg-warning text-dark" : "bg-success text-white")">
+            <span><strong>Информация о выдаче #@loan.LoanId</strong></span>
+            @if (Model.IsOverdue)
+            {
+                <span class="badge bg-dark">⚠️ Просрочено на @Model.OverdueDays дн.</span>
+            }
+            else
+            {
+                <span class="badge bg-light text-success">✅ В срок</span>
+            }
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Книга</dt>
+                <dd class="col-sm-8">@(book?.Name ?? "—")</dd>
+
+                <dt class="col-sm-4">Автор</dt>
+                <dd class="col-sm-8">@(author?.FullName ?? "—")</dd>
+
+                <dt class="col-sm-4">Издательство</dt>
+                <dd class="col-sm-8">@(publisher?.Name ?? "—")</dd>
+
+                <dt class="col-sm-4">Читатель</dt>
+                <dd class="col-sm-8">@loan.User?.FullName (@loan.User?.Email)</dd>
+
+                <dt class="col-sm-4">Выдана</dt>
+                <dd class="col-sm-8">@loan.IssuedAt.ToLocalTime().ToString("dd.MM.yyyy")</dd>
+
+                <dt class="col-sm-4">Срок возврата</dt>
+                <dd class="col-sm-8 @(Model.IsOverdue ? "text-danger fw-bold" : "")">
+                    @loan.DueDate.ToLocalTime().ToString("dd.MM.yyyy")
+                    @if (Model.IsOverdue)
+                    {
+                        <span class="ms-2 text-danger">(просрочено на @Model.OverdueDays дн.)</span>
+                    }
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    @* Блок штрафа — показывается только при просрочке *@
+    @if (Model.IsOverdue)
+    {
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger text-white">
+                <strong>💰 Начислить штраф</strong>
+            </div>
+            <div class="card-body">
+                <form asp-action="ReturnWithFine" asp-controller="ReturnBook" method="post" id="fineForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="loanId" value="@loan.LoanId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Цена за 1 просроченный день (₽)</label>
+                        <input type="number" id="pricePerDay" name="pricePerDay"
+                               class="form-control" min="0.01" step="0.01"
+                               placeholder="Например: 10.00" required
+                               oninput="calcFine()" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Количество просроченных дней</label>
+                        <input type="text" class="form-control bg-light"
+                               value="@Model.OverdueDays" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Итого штраф (₽)</label>
+                        <input type="text" id="totalFine" class="form-control bg-warning fw-bold"
+                               value="0.00" readonly />
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100">
+                        💳 Внести штраф и принять книгу
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    @* Кнопка приёма без штрафа — всегда доступна *@
+    <div class="card border-secondary">
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                Библиотекарь может принять книгу без начисления штрафа.
+                Книга вернётся в список доступных.
+            </p>
+            <form asp-action="ReturnWithoutFine" asp-controller="ReturnBook" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="loanId" value="@loan.LoanId" />
+                <button type="submit" class="btn btn-outline-secondary w-100">
+                    ✅ Принять книгу без штрафа
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function calcFine() {
+            const price = parseFloat(document.getElementById('pricePerDay').value) || 0;
+            const days = @Model.OverdueDays;
+            const total = (price * days).toFixed(2);
+            document.getElementById('totalFine').value = total;
+        }
+    </script>
+}

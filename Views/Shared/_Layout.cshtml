@@ -145,7 +145,7 @@
         @if (User.Identity?.IsAuthenticated == true)
         {
             <a asp-controller="Profile" asp-action="Index"
-               class="@NavClass("Profile")">Мои книги</a>
+               class="@NavClass("Profile")">Профиль</a>
             <div class="nav-user">
                 <div class="nav-avatar">
                     @(User.Identity.Name?.Substring(0, 1).ToUpper())
@@ -167,6 +167,7 @@
 <div class="container-fluid px-4 py-4" style="max-width: 1200px; margin: 0 auto;">
     <main role="main" class="pb-3">
         @RenderBody()
+
     </main>
 </div>
 

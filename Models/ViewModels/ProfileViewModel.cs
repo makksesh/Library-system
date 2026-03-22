@@ -15,4 +15,5 @@ public class ProfileViewModel
 
     // Книги, которые нужно вернуть в ближайшие N дней
     public List<Loan> SoonDue { get; set; } = new();
+    public List<Fine> Fines { get; set; } = new();
 }

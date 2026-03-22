@@ -21,13 +21,11 @@ namespace LibApp.Controllers
             _context = context;
         }
 
-        // GET: Publishers
         public async Task<IActionResult> Index()
         {
             return View(await _context.Publishers.ToListAsync());
         }
 
-        // GET: Publishers/Details/5
         public async Task<IActionResult> Details(long? id)
         {
             if (id == null)
@@ -52,9 +50,6 @@ namespace LibApp.Controllers
             return View();
         }
 
-        // POST: Publishers/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles="Admin, Librarian")]
@@ -69,7 +64,6 @@ namespace LibApp.Controllers
             return View(publisher);
         }
 
-        // GET: Publishers/Edit/5
         [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Edit(long? id)
         {
@@ -86,9 +80,6 @@ namespace LibApp.Controllers
             return View(publisher);
         }
 
-        // POST: Publishers/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles="Admin, Librarian")]
@@ -122,7 +113,6 @@ namespace LibApp.Controllers
             return View(publisher);
         }
 
-        // GET: Publishers/Delete/5
         [Authorize(Roles="Admin, Librarian")]
         public async Task<IActionResult> Delete(long? id)
         {
@@ -141,7 +131,6 @@ namespace LibApp.Controllers
             return View(publisher);
         }
 
-        // POST: Publishers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize(Roles="Admin, Librarian")]

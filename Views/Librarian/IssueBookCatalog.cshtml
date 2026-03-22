@@ -1,0 +1,174 @@
+@model IEnumerable<LibApp.Models.ViewModels.IssueBookCatalogItem>
+@{
+    ViewData["Title"] = "Выдача книги";
+    var categories = ViewBag.Categories as List<string> ?? new();
+    long readerId  = (long)(ViewBag.ReaderId ?? 0L);
+    string readerName = (string)(ViewBag.ReaderName ?? "");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-1">
+    <div>
+        <h3 class="fw-bold mb-0" style="color: var(--blue-dk);">📖 Выдача книги</h3>
+        <span class="text-muted small">
+            Читатель: <strong>@readerName</strong> (ID: @readerId)
+        </span>
+    </div>
+    <a asp-action="FindReaderGet" asp-route-readerId="@readerId"
+       class="btn btn-outline-secondary btn-sm">← Назад к читателю</a>
+</div>
+
+@* Фильтры *@
+<form method="get" class="row g-2 my-3 align-items-end">
+    <input type="hidden" name="readerId" value="@readerId" />
+    <div class="col-md-6">
+        <label class="form-label small text-muted">Поиск по названию / автору</label>
+        <input type="text" name="search" value="@ViewBag.Search"
+               class="form-control form-control-sm"
+               placeholder="Например: Паттерны проектирования" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small text-muted">Жанр</label>
+        <select name="category" class="form-select form-select-sm">
+            <option value="">Все жанры</option>
+            @foreach (var cat in categories)
+            {
+                <option value="@cat"
+                        selected="@(ViewBag.SelectedCategory == cat ? "selected" : null)">
+                    @cat
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Найти</button>
+        <a asp-action="IssueBookCatalog" asp-route-readerId="@readerId"
+           class="btn btn-outline-secondary btn-sm">Сбросить</a>
+    </div>
+</form>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        ⚠️ @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Книги не найдены. Попробуйте изменить фильтры.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle shadow-sm rounded overflow-hidden">
+            <thead style="background: var(--blue-dk); color:#fff;">
+                <tr>
+                    <th>#</th>
+                    <th>Название</th>
+                    <th>Автор</th>
+                    <th>Жанр</th>
+                    <th>Год</th>
+                    <th>Всего</th>
+                    <th>Свободно</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int i = 1; }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-muted">@i++</td>
+                        <td class="fw-semibold">@item.Title</td>
+                        <td>@item.Author</td>
+                        <td>@item.Category</td>
+                        <td>@item.Year</td>
+                        <td>@item.TotalExamples</td>
+                        <td>
+                            @if (item.AvailableExamples > 0)
+                            {
+                                <span class="badge" style="background: var(--green);">
+                                    Доступно: @item.AvailableExamples
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Нет в наличии</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.FreeExampleBookId.HasValue)
+                            {
+                                <button class="btn btn-sm btn-success"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#issueDueDateModal"
+                                        data-example-id="@item.FreeExampleBookId"
+                                        data-book-title="@item.Title">
+                                    Выдать
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                    Недоступно
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* ── Модалка для ввода даты возврата ── *@
+<div class="modal fade" id="issueDueDateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Укажите дату возврата</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Librarian" asp-action="IssueBook" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="readerId"      value="@readerId" />
+                <input type="hidden" name="exampleBookId" id="modalExampleBookId" />
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Книга: <strong id="modalBookTitle"></strong>
+                    </p>
+                    <label class="form-label">Дата возврата (DueDate)</label>
+                    <input type="date" name="dueDate" class="form-control" required
+                           min="@DateTime.Today.AddDays(10).ToString("yyyy-MM-dd")" />
+                    <div class="form-text">Минимум — 10 дней от сегодняшней даты.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success">Подтвердить выдачу</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('issueDueDateModal')
+            .addEventListener('show.bs.modal', function (e) {
+                const btn = e.relatedTarget;
+                document.getElementById('modalExampleBookId').value =
+                    btn.getAttribute('data-example-id');
+                document.getElementById('modalBookTitle').textContent =
+                    btn.getAttribute('data-book-title');
+            });
+    </script>
+}

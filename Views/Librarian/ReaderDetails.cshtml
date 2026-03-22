@@ -1,0 +1,180 @@
+@model LibApp.Models.ViewModels.ReaderDetailsViewModel
+@{
+    ViewData["Title"] = "Информация о читателе";
+}
+
+<h2>Читатель: @Model.Reader.FullName</h2>
+<p><strong>ID:</strong> @Model.Reader.UserId</p>
+<p><strong>Телефон:</strong> @(Model.Reader.PhoneNumber ?? "не указан")</p>
+<p><strong>Email:</strong> @Model.Reader.Email</p>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<a asp-action="IssueBookCatalog"
+   asp-route-readerId="@Model.Reader.UserId"
+   class="btn btn-success mb-3">
+    📖 Выдать книгу этому читателю
+</a>
+
+
+<h4 class="mt-4">Забронированные книги</h4>
+@if (!Model.Reservations.Any())
+{
+    <p class="text-muted">Нет активных броней.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Книга</th>
+                <th>Автор</th>
+                <th>Экземпляр ID</th>
+                <th>Дата брони</th>
+                <th>Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var loan in Model.Reservations)
+            {
+                <tr>
+                    <td>@loan.ExampleBook.VersionBook.Book.Name</td>
+                    <td>@loan.ExampleBook.VersionBook.Book.Author.FullName</td>
+                    <td>@loan.ExampleBookId</td>
+                    <td>@loan.IssuedAt.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning"
+                                data-bs-toggle="modal"
+                                data-bs-target="#issueReservedModal-@loan.LoanId">
+                            Выдать
+                        </button>
+
+                        <!-- Модалка: ввод DueDate для этой брони -->
+                        <div class="modal fade" id="issueReservedModal-@loan.LoanId" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Выдать книгу</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form asp-action="IssueReserved" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="loanId" value="@loan.LoanId" />
+                                        <input type="hidden" name="readerId" value="@Model.Reader.UserId" />
+                                        <div class="modal-body">
+                                            <label class="form-label">Дата возврата (DueDate)</label>
+                                            <input type="date" name="dueDate" class="form-control" required
+                                                   min="@DateTime.Today.AddDays(10).ToString("yyyy-MM-dd")" />
+
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-warning">Подтвердить выдачу</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h4 class="mt-4">Выданные книги</h4>
+@if (!Model.ActiveLoans.Any())
+{
+    <p class="text-muted">Нет активных выдач.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Книга</th>
+                <th>Автор</th>
+                <th>Экземпляр ID</th>
+                <th>Выдана</th>
+                <th>Вернуть до</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var loan in Model.ActiveLoans)
+            {
+                var isOverdue = loan.DueDate < DateTime.UtcNow;
+                <tr class="@(isOverdue ? "table-danger" : "")">
+                    <td>@loan.ExampleBook.VersionBook.Book.Name</td>
+                    <td>@loan.ExampleBook.VersionBook.Book.Author.FullName</td>
+                    <td>@loan.ExampleBookId</td>
+                    <td>@loan.IssuedAt.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td>@loan.DueDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h4 class="mt-4">Задолженности</h4>
+@if (!Model.Fines.Any())
+{
+    <p class="text-muted">Штрафов нет.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Причина</th>
+                <th>Сумма</th>
+                <th>Выписан</th>
+                <th>Статус</th>
+                <th>Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var fine in Model.Fines)
+            {
+                var unpaid = !fine.PaidAt.HasValue;
+                <tr class="@(unpaid ? "table-warning" : "")">
+                    <td>@fine.FineId</td>
+                    <td>@(fine.Reason ?? "—")</td>
+                    <td>@fine.Amount.ToString("F2") ₽</td>
+                    <td>@fine.IssuedAt.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td>
+                        @if (unpaid)
+                        {
+                            <span class="badge bg-warning text-dark">Не оплачен</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Оплачен @fine.PaidAt!.Value.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                        }
+                    </td>
+                    <td>
+                        @if (unpaid)
+                        {
+                            <form asp-action="PayFine" method="post" style="display:inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="fineId" value="@fine.FineId" />
+                                <input type="hidden" name="readerId" value="@Model.Reader.UserId" />
+                                <button type="submit" class="btn btn-sm btn-success">Оплатить</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
+<a asp-action="Index" class="btn btn-secondary mt-3">← Назад</a>
