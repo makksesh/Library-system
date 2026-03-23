@@ -18,7 +18,7 @@ public class ExampleBooksController : Controller
     
     [Authorize(Roles = "Admin,Librarian")]
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? category, string? status)
+    public async Task<IActionResult> Index(string? search, string? category, string? status, bool showDeleted = false)
     {
         var query = _context.ExampleBooks
             .Include(eb => eb.VersionBook)
@@ -27,6 +27,7 @@ public class ExampleBooksController : Controller
             .Include(eb => eb.VersionBook)
                 .ThenInclude(v => v.Book)
                     .ThenInclude(b => b.Category)
+            .Where(eb => eb.IsDeleted == showDeleted)
             .AsQueryable();
         
         if (!string.IsNullOrWhiteSpace(search))
@@ -62,7 +63,8 @@ public class ExampleBooksController : Controller
             ShelfCode     = eb.ShelfCode,
             Status        = eb.Status,
             Condition     = eb.Condition,
-            IsOnLoan      = busyIds.Contains(eb.ExampleBookId)
+            IsOnLoan      = busyIds.Contains(eb.ExampleBookId),
+            IsDeleted     = eb.IsDeleted 
         }).ToList();
 
         ViewBag.Search           = search;
@@ -167,6 +169,21 @@ public class ExampleBooksController : Controller
             "VersionBookId", "Display", eb.VersionBookId);
         return View(eb);
     }
+    
+    [Authorize(Roles = "Admin,Librarian")]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Restore(long id)
+    {
+        var eb = await _context.ExampleBooks.FindAsync(id);
+        if (eb != null)
+        {
+            eb.IsDeleted = false;
+            await _context.SaveChangesAsync();
+            TempData["Success"] = $"Экземпляр #{id} восстановлен.";
+        }
+        return RedirectToAction(nameof(Index), new { showDeleted = true });
+    }
 
     #endregion
     
@@ -180,7 +197,7 @@ public class ExampleBooksController : Controller
             .FirstOrDefaultAsync(e => e.ExampleBookId == id);
         if (eb == null) return NotFound();
 
-        var hasLoans = await _context.Loans.AnyAsync(l => l.ExampleBookId == id);
+        var hasLoans = await _context.Loans.AnyAsync(l => l.ExampleBookId == id && l.ReturnedAt == null);
         if (hasLoans)
             ViewBag.ErrorMessage = "Нельзя удалить экземпляр: по нему есть выдачи.";
 
@@ -192,19 +209,20 @@ public class ExampleBooksController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(long id)
     {
-        var hasLoans = await _context.Loans.AnyAsync(l => l.ExampleBookId == id);
-        if (hasLoans)
+        var hasActiveLoans = await _context.Loans
+            .AnyAsync(l => l.ExampleBookId == id && l.ReturnedAt == null);
+        if (hasActiveLoans)
         {
-            TempData["Error"] = "Нельзя удалить экземпляр: по нему есть выдачи.";
+            TempData["Error"] = "Нельзя удалить экземпляр: по нему есть активные выдачи.";
             return RedirectToAction(nameof(Index));
         }
 
         var eb = await _context.ExampleBooks.FindAsync(id);
         if (eb != null)
         {
-            _context.ExampleBooks.Remove(eb);
+            eb.IsDeleted = true;
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Экземпляр удалён.";
+            TempData["Success"] = "Экземпляр помечен как удалённый.";
         }
         return RedirectToAction(nameof(Index));
     }

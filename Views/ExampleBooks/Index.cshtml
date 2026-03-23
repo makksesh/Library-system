@@ -5,8 +5,10 @@
 
 @{
     ViewData["Title"] = "Экземпляры";
-    var categories = ViewBag.Categories as List<string> ?? new();
-    var statuses   = ViewBag.Statuses   as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    var categories   = ViewBag.Categories as List<string> ?? new();
+    var statuses     = ViewBag.Statuses   as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+    bool showDeleted = ViewBag.ShowDeleted is true;
+    int deletedCount = ViewBag.DeletedCount is int dc ? dc : 0;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -14,11 +16,40 @@
         <h3 class="fw-bold mb-0" style="color: var(--blue-dk);">📦 Физические экземпляры</h3>
         <span class="text-muted small">Управление фондом библиотеки</span>
     </div>
-    <a asp-action="Create" class="btn btn-success btn-sm">+ Добавить экземпляр</a>
+    @if (!showDeleted)
+    {
+        <a asp-action="Create" class="btn btn-success btn-sm">+ Добавить экземпляр</a>
+    }
+</div>
+
+@* ── Переключатель активные / удалённые ── *@
+<div class="d-flex align-items-center gap-3 mt-2 mb-1">
+    @if (!showDeleted)
+    {
+        <a asp-action="Index"
+           asp-route-showDeleted="true"
+           class="btn btn-outline-secondary btn-sm">
+            🗑️ Показать удалённые
+            @if (deletedCount > 0)
+            {
+                <span class="badge bg-danger ms-1">@deletedCount</span>
+            }
+        </a>
+    }
+    else
+    {
+        <div class="alert alert-warning py-1 px-3 mb-0 d-flex align-items-center gap-2">
+            <span>⚠️ Вы просматриваете <strong>удалённые</strong> экземпляры</span>
+            <a asp-action="Index" class="btn btn-sm btn-outline-dark ms-2">
+                ← Вернуться к активным
+            </a>
+        </div>
+    }
 </div>
 
 @* ── Фильтры ── *@
 <form method="get" class="row g-2 my-3 align-items-end">
+    <input type="hidden" name="showDeleted" value="@showDeleted.ToString().ToLower()" />
     <div class="col-md-4">
         <label class="form-label small text-muted">Поиск по ID, названию или автору</label>
         <input type="text" name="search" value="@ViewBag.Search"
@@ -52,7 +83,9 @@
     </div>
     <div class="col-md-3 d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-sm w-100">Найти</button>
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Сбросить</a>
+        <a asp-action="Index"
+           asp-route-showDeleted="@showDeleted.ToString().ToLower()"
+           class="btn btn-outline-secondary btn-sm">Сбросить</a>
     </div>
 </form>
 
@@ -73,7 +106,11 @@
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info mt-3">Экземпляры не найдены. Попробуйте изменить фильтры.</div>
+    <div class="alert alert-info mt-3">
+        @(showDeleted
+            ? "Удалённых экземпляров нет."
+            : "Экземпляры не найдены. Попробуйте изменить фильтры.")
+    </div>
 }
 else
 {
@@ -95,7 +132,7 @@ else
             <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr>
+                    <tr class="@(item.IsDeleted ? "table-secondary text-decoration-line-through" : "")">
                         <td class="font-monospace text-muted">@item.ExampleBookId</td>
                         <td class="fw-semibold">@item.Title</td>
                         <td>@item.Author</td>
@@ -113,16 +150,18 @@ else
                             @{
                                 var (statusClass, statusIcon) = item.Status switch
                                 {
-                                    BookStatus.Available    => ("success",   "✅"),
-                                    BookStatus.OnLoan       => ("primary",   "📤"),
-                                    BookStatus.Reserved     => ("warning",   "🔖"),
-                                    BookStatus.Restoration  => ("secondary", "🔧"),
-                                    BookStatus.WriteOff     => ("dark",      "🗑️"),
-                                    BookStatus.Lost         => ("danger",    "❓"),
-                                    _                       => ("secondary", "")
+                                    BookStatus.Available   => ("success",   "✅"),
+                                    BookStatus.OnLoan      => ("primary",   "📤"),
+                                    BookStatus.Reserved    => ("warning",   "🔖"),
+                                    BookStatus.Restoration => ("secondary", "🔧"),
+                                    BookStatus.WriteOff    => ("dark",      "🗑️"),
+                                    BookStatus.Lost        => ("danger",    "❓"),
+                                    _                      => ("secondary", "")
                                 };
                             }
-                            <span class="badge bg-@statusClass">@statusIcon @item.Status.GetDisplayName()</span>
+                            <span class="badge bg-@statusClass">
+                                @statusIcon @item.Status.GetDisplayName()
+                            </span>
                         </td>
                         <td>
                             @{
@@ -136,7 +175,9 @@ else
                                     _                    => "secondary"
                                 };
                             }
-                            <span class="badge bg-@condClass">@item.Condition.GetDisplayName()</span>
+                            <span class="badge bg-@condClass">
+                                @item.Condition.GetDisplayName()
+                            </span>
                         </td>
                         <td>
                             @if (item.IsOnLoan)
@@ -149,13 +190,26 @@ else
                             }
                         </td>
                         <td>
-                            <a asp-action="Details" asp-route-id="@item.ExampleBookId"
-                               class="btn btn-outline-secondary btn-sm">🔍</a>
-                            <a asp-action="Edit" asp-route-id="@item.ExampleBookId"
-                               class="btn btn-outline-primary btn-sm">✏️</a>
-                            <a asp-action="Delete" asp-route-id="@item.ExampleBookId"
-                               class="btn btn-outline-danger btn-sm"
-                               onclick="return confirm('Удалить экземпляр #@item.ExampleBookId?')">🗑️</a>
+                            @if (item.IsDeleted)
+                            {
+                                <form asp-action="Restore" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.ExampleBookId" />
+                                    <button type="submit" class="btn btn-outline-success btn-sm"
+                                            title="Восстановить экземпляр">
+                                        ♻️ Восстановить
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <a asp-action="Details" asp-route-id="@item.ExampleBookId"
+                                   class="btn btn-outline-secondary btn-sm">🔍</a>
+                                <a asp-action="Edit" asp-route-id="@item.ExampleBookId"
+                                   class="btn btn-outline-primary btn-sm">✏️</a>
+                                <a asp-action="Delete" asp-route-id="@item.ExampleBookId"
+                                   class="btn btn-outline-danger btn-sm">🗑️</a>
+                            }
                         </td>
                     </tr>
                 }

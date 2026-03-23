@@ -10,4 +10,5 @@ public class ExampleBookCatalogItem
     public BookStatus Status    { get; set; }
     public BookCondition Condition { get; set; }
     public bool IsOnLoan        { get; set; }  // есть активная выдача
+    public bool IsDeleted       { get; set; }  // мягкое удаление
 }

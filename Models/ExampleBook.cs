@@ -24,6 +24,8 @@ public class ExampleBook
     [ValidateNever]
     [Display(Name = "Издательство")]
     public VersionBook VersionBook { get; set; } = null!;
+    
+    public bool IsDeleted { get; set; } =  false;
 }
 
 

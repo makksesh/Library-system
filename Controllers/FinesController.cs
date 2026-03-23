@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -154,23 +151,15 @@ namespace LibApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            var fine = await _context.Fines
-                .Include(f => f.Librarian)
-                .Include(f => f.Reader)
-                .FirstOrDefaultAsync(m => m.FineId == id);
+            var fine = await _context.Fines.FindAsync(id);
 
-            if (fine.Librarian != null || fine.Reader != null)
-            {
-                ViewBag.ErrorMessage = "У данного штрафа есть библиотекарь и читатель";
-                return View("Delete", fine);
-            }
-            
             if (fine != null)
             {
                 _context.Fines.Remove(fine);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Штраф удалён.";
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 

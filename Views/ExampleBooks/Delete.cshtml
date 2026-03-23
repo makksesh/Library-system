@@ -57,7 +57,9 @@
             <div class="d-flex gap-2">
                 @if (canDelete)
                 {
-                    <button type="submit" class="btn btn-danger w-100">🗑️ Да, удалить</button>
+                    <button type="submit" class="btn btn-danger w-100">
+                        🗑️ Пометить как удалённый
+                    </button>
                 }
                 <a asp-action="Index" class="btn btn-outline-secondary w-100">Отмена</a>
             </div>

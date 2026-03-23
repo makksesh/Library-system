@@ -21,7 +21,7 @@ namespace LibApp.Controllers
             _context = context;
         }
 
-        // GET: Loans
+        // GET
         public async Task<IActionResult> Index()
         {
             var appDbContext = _context.Loans.Include(l => l.ExampleBook).Include(l => l.User);
@@ -46,6 +46,8 @@ namespace LibApp.Controllers
 
             return View(loan);
         }
+
+        #region Create
 
         public IActionResult Create()
         {
@@ -73,6 +75,10 @@ namespace LibApp.Controllers
             ViewData["UserId"] = new SelectList(_context.Users, "UserId", "Email", loan.UserId);
             return View(loan);
         }
+
+        #endregion
+
+        #region Edit
 
         public async Task<IActionResult> Edit(long? id)
         {
@@ -130,21 +136,18 @@ namespace LibApp.Controllers
             return View(loan);
         }
 
+        #endregion
+
         public async Task<IActionResult> Delete(long? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var loan = await _context.Loans
                 .Include(l => l.ExampleBook)
                 .Include(l => l.User)
                 .FirstOrDefaultAsync(m => m.LoanId == id);
-            if (loan == null)
-            {
-                return NotFound();
-            }
+
+            if (loan == null) return NotFound();
 
             return View(loan);
         }
@@ -158,19 +161,19 @@ namespace LibApp.Controllers
                 .Include(l => l.User)
                 .FirstOrDefaultAsync(m => m.LoanId == id);
 
-            if (loan.ExampleBook != null || loan.User != null)
-            {
-                ViewBag.ErrorMessage = "У этой выдчи есть экземпляр книги или пользователь";
-                return View("Delete", loan);
-            }
-            if (loan != null)
-            {
-                _context.Loans.Remove(loan);
-            }
+            if (loan == null)
+                return RedirectToAction(nameof(Index));
+            
+            if (loan.ReturnedAt == null && loan.ExampleBook != null)
+                loan.ExampleBook.Status = BookStatus.Available;
 
+            _context.Loans.Remove(loan);
             await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Выдача удалена.";
             return RedirectToAction(nameof(Index));
         }
+
 
         private bool LoanExists(long id)
         {
